@@ -1,0 +1,9 @@
+{
+  "name": "dcms-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/dcms-e2e/src",
+  "implicitDependencies": ["dcms"],
+  "// targets": "to see all targets run: nx show project dcms-e2e --web",
+  "targets": {}
+}

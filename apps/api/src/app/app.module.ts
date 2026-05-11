@@ -17,6 +17,8 @@ import { PayoutController } from './controllers/payout.controller';
 import { JoinRequestController } from './controllers/join-request.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { SyncController } from './sync/sync.controller';
+import { SyncService } from './sync/sync.service';
 
 @Module({
   imports: [
@@ -40,6 +42,7 @@ import { AppService } from './app.service';
     PaymentController,
     PayoutController,
     JoinRequestController,
+    SyncController,
   ],
   providers: [
     AppService,
@@ -47,6 +50,7 @@ import { AppService } from './app.service';
     PaymentService,
     PayoutService,
     JoinRequestService,
+    SyncService,
   ],
 })
 export class AppModule {}

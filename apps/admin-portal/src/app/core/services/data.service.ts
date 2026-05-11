@@ -1,4 +1,5 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Committee, CommitteeStatus, CommitteeType, User, UserStatus, Payment, PaymentStatus, PaymentMethod, JoinRequest } from '@dcms/shared-types';
 import { MOCK_USERS, MOCK_COMMITTEES, MOCK_PAYMENTS, MOCK_JOIN_REQUESTS } from '@dcms/shared-types';
 
@@ -11,10 +12,10 @@ export interface BankSettings {
 @Injectable({ providedIn: 'root' })
 export class DataService {
   // --- State ---
-  private _committees = signal<Committee[]>(this.loadData('committees', MOCK_COMMITTEES));
-  private _users = signal<User[]>(this.loadData('users', MOCK_USERS));
-  private _payments = signal<Payment[]>(this.loadData('payments', MOCK_PAYMENTS));
-  private _joinRequests = signal<JoinRequest[]>(this.loadData('joinRequests', MOCK_JOIN_REQUESTS));
+  private _committees = signal<Committee[]>(this.loadData('committees', MOCK_COMMITTEES as any));
+  private _users = signal<User[]>(this.loadData('users', MOCK_USERS as any));
+  private _payments = signal<Payment[]>(this.loadData('payments', MOCK_PAYMENTS as any));
+  private _joinRequests = signal<JoinRequest[]>(this.loadData('joinRequests', MOCK_JOIN_REQUESTS as any));
   private _bankSettings = signal<BankSettings>({
     accountTitle: '',
     accountNumber: '',
@@ -35,42 +36,43 @@ export class DataService {
   pendingJoinRequests = computed(() => this._joinRequests().filter(r => r.status === 'Pending').length);
   pendingPayments = computed(() => this._payments().filter(p => p.status === PaymentStatus.Pending).length);
 
+  private readonly http = inject(HttpClient);
+
   constructor() {
-    this.loadBankSettings();
-    // Listen for storage events to sync across tabs (optional but good for Vercel demo)
-    window.addEventListener('storage', (e) => {
-      if (e.key?.startsWith('dcms_')) {
-        this.syncFromStorage();
-      }
-    });
+    this.syncWithApi();
+    setInterval(() => this.syncWithApi(), 3000);
   }
 
   private loadData<T>(key: string, mockData: T[]): T[] {
-    const saved = localStorage.getItem(`dcms_${key}`);
-    if (saved) {
-      try { return JSON.parse(saved); } catch {}
-    }
-    localStorage.setItem(`dcms_${key}`, JSON.stringify(mockData));
-    return mockData;
+    return mockData; // Initial value before sync
   }
 
   private saveData<T>(key: string, data: T[]): void {
-    localStorage.setItem(`dcms_${key}`, JSON.stringify(data));
+    const state = {
+      users: this._users(),
+      committees: this._committees(),
+      payments: this._payments(),
+      joinRequests: this._joinRequests(),
+      bankSettings: this._bankSettings()
+    };
+    this.http.post('http://localhost:3000/api/sync', state).subscribe({
+      error: () => console.warn('Failed to save to API')
+    });
   }
 
-  private loadBankSettings() {
-    const saved = localStorage.getItem('dcms_bank_settings');
-    if (saved) {
-      try { this._bankSettings.set(JSON.parse(saved)); } catch {}
-    }
-  }
+  private loadBankSettings() {}
 
-  syncFromStorage() {
-    this._committees.set(this.loadData('committees', MOCK_COMMITTEES));
-    this._users.set(this.loadData('users', MOCK_USERS));
-    this._payments.set(this.loadData('payments', MOCK_PAYMENTS));
-    this._joinRequests.set(this.loadData('joinRequests', MOCK_JOIN_REQUESTS));
-    this.loadBankSettings();
+  syncWithApi() {
+    this.http.get<any>('http://localhost:3000/api/sync').subscribe({
+      next: (data) => {
+        if (data.users) this._users.set(data.users);
+        if (data.committees) this._committees.set(data.committees);
+        if (data.payments) this._payments.set(data.payments);
+        if (data.joinRequests) this._joinRequests.set(data.joinRequests);
+        if (data.bankSettings) this._bankSettings.set(data.bankSettings);
+      },
+      error: () => console.warn('Failed to sync from API')
+    });
   }
 
   // --- Committee CRUD ---

@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import {
   MOCK_COMMITTEES,
   MOCK_JOIN_REQUESTS,
@@ -30,13 +31,13 @@ export class UserDataService {
   private readonly auth = inject(UserAuthService);
 
   readonly loading = signal(false);
-  readonly users = signal<User[]>(this.loadData('users', MOCK_USERS));
-  readonly committees = signal<Committee[]>(this.loadData('committees', MOCK_COMMITTEES));
-  readonly payments = signal<Payment[]>(this.loadData('payments', MOCK_PAYMENTS));
-  readonly payouts = signal<Payout[]>(this.loadData('payouts', MOCK_PAYOUTS));
-  readonly tickets = signal<Ticket[]>(this.loadData('tickets', MOCK_TICKETS));
-  readonly notifications = signal<Notification[]>(this.loadData('notifications', MOCK_NOTIFICATIONS));
-  readonly joinRequests = signal<JoinRequest[]>(this.loadData('joinRequests', MOCK_JOIN_REQUESTS));
+  readonly users = signal<User[]>(this.loadData('users', MOCK_USERS as any));
+  readonly committees = signal<Committee[]>(this.loadData('committees', MOCK_COMMITTEES as any));
+  readonly payments = signal<Payment[]>(this.loadData('payments', MOCK_PAYMENTS as any));
+  readonly payouts = signal<Payout[]>(this.loadData('payouts', MOCK_PAYOUTS as any));
+  readonly tickets = signal<Ticket[]>(this.loadData('tickets', MOCK_TICKETS as any));
+  readonly notifications = signal<Notification[]>(this.loadData('notifications', MOCK_NOTIFICATIONS as any));
+  readonly joinRequests = signal<JoinRequest[]>(this.loadData('joinRequests', MOCK_JOIN_REQUESTS as any));
   readonly bankSettings = signal<BankSettings>(this.loadBankSettings());
 
   readonly currentUser = computed(() => this.auth.currentUser());
@@ -54,49 +55,55 @@ export class UserDataService {
     return this.committees().filter(c => approvedIds.includes(c.id) || c.leaderId === uid);
   });
 
+  private readonly http = inject(HttpClient);
+
   constructor() {
-    window.addEventListener('storage', (e) => {
-      if (e.key?.startsWith('dcms_')) {
-        this.syncFromStorage();
-      }
-    });
+    this.syncWithApi();
+    setInterval(() => this.syncWithApi(), 3000);
   }
 
   private loadData<T>(key: string, mockData: T[]): T[] {
-    const saved = localStorage.getItem(`dcms_${key}`);
-    if (saved) {
-      try { return JSON.parse(saved); } catch {}
-    }
-    localStorage.setItem(`dcms_${key}`, JSON.stringify(mockData));
-    return mockData;
+    return mockData; // Initial value before sync
   }
 
   private saveData<T>(key: string, data: T[]): void {
-    localStorage.setItem(`dcms_${key}`, JSON.stringify(data));
+    const state = {
+      users: this.users(),
+      committees: this.committees(),
+      payments: this.payments(),
+      payouts: this.payouts(),
+      tickets: this.tickets(),
+      notifications: this.notifications(),
+      joinRequests: this.joinRequests(),
+      bankSettings: this.bankSettings()
+    };
+    this.http.post('http://localhost:3000/api/sync', state).subscribe({
+      error: () => console.warn('Failed to save to API')
+    });
   }
 
   private loadBankSettings(): BankSettings {
-    try {
-      const saved = localStorage.getItem('dcms_bank_settings');
-      if (saved) return JSON.parse(saved);
-    } catch {}
     return { accountTitle: '', accountNumber: '', bankName: '' };
   }
 
-  syncFromStorage() {
-    this.users.set(this.loadData('users', MOCK_USERS));
-    this.committees.set(this.loadData('committees', MOCK_COMMITTEES));
-    this.payments.set(this.loadData('payments', MOCK_PAYMENTS));
-    this.payouts.set(this.loadData('payouts', MOCK_PAYOUTS));
-    this.tickets.set(this.loadData('tickets', MOCK_TICKETS));
-    this.notifications.set(this.loadData('notifications', MOCK_NOTIFICATIONS));
-    this.joinRequests.set(this.loadData('joinRequests', MOCK_JOIN_REQUESTS));
-    this.refreshBankSettings();
+  syncWithApi() {
+    this.http.get<any>('http://localhost:3000/api/sync').subscribe({
+      next: (data) => {
+        if (data.users) this.users.set(data.users);
+        if (data.committees) this.committees.set(data.committees);
+        if (data.payments) this.payments.set(data.payments);
+        if (data.payouts) this.payouts.set(data.payouts);
+        if (data.tickets) this.tickets.set(data.tickets);
+        if (data.notifications) this.notifications.set(data.notifications);
+        if (data.joinRequests) this.joinRequests.set(data.joinRequests);
+        if (data.bankSettings) this.bankSettings.set(data.bankSettings);
+      },
+      error: () => console.warn('Failed to sync from API')
+    });
   }
 
-  // Reload bank settings from localStorage (in case admin saved them)
   refreshBankSettings(): void {
-    this.bankSettings.set(this.loadBankSettings());
+    this.syncWithApi();
   }
 
   submitPayment(data: { amount: number; referenceNumber: string; note: string; committeeId?: string }): void {

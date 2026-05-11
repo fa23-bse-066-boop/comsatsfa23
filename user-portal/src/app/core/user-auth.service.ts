@@ -11,8 +11,9 @@ export class UserAuthService {
     return Boolean(localStorage.getItem(TOKEN_KEYS.USER_TOKEN));
   }
 
+  pendingRegistration: any = null;
+
   login(email?: string, password?: string): boolean {
-    // Find user by email, any password works for demo
     const user = email
       ? MOCK_USERS.find(u => u.email === email)
       : MOCK_USERS[0];
@@ -24,6 +25,26 @@ export class UserAuthService {
       return true;
     }
     return false;
+  }
+
+  register(): boolean {
+    if (!this.pendingRegistration) return false;
+    const { email, name, cnic } = this.pendingRegistration;
+    const newUser = { 
+      id: 'usr_' + Date.now(), 
+      name, 
+      email, 
+      cnic,
+      role: 'User', 
+      status: 'Active', 
+      trustScore: 100, 
+      joinDate: new Date().toISOString() 
+    };
+    this.currentUser.set(newUser as any);
+    localStorage.setItem(TOKEN_KEYS.USER_TOKEN, this.createToken(newUser.id));
+    this.pendingRegistration = null;
+    void this.router.navigateByUrl('/dashboard');
+    return true;
   }
 
   logout(): void {

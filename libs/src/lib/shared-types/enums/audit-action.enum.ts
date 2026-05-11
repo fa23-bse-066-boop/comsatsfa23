@@ -1,0 +1,15 @@
+export enum AuditAction {
+  AdminLogin = 'ADMIN_LOGIN',
+  AdminLogout = 'ADMIN_LOGOUT',
+  PaymentApproved = 'PAYMENT_APPROVED',
+  PaymentRejected = 'PAYMENT_REJECTED',
+  UserSuspended = 'USER_SUSPENDED',
+  UserBanned = 'USER_BANNED',
+  CommitteeCreated = 'COMMITTEE_CREATED',
+  CommitteeEdited = 'COMMITTEE_EDITED',
+  KycApproved = 'KYC_APPROVED',
+  PayoutReleased = 'PAYOUT_RELEASED',
+  TicketResolved = 'TICKET_RESOLVED',
+  SettingChanged = 'SETTING_CHANGED',
+  AdminImpersonated = 'ADMIN_IMPERSONATED_USER',
+}

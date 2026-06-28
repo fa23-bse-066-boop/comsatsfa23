@@ -6,13 +6,18 @@
 
 ## ⚡ Quick Setup (5 minutes)
 
-### Step 1: Install MongoDB (Choose one)
+### Step 1: Start Databases (MongoDB + PostgreSQL)
 
 **Option A: Docker (Easiest)**
 ```bash
 cd dcms
 docker-compose up -d
 ```
+PostgreSQL runs on `localhost:5432` with:
+- Database: `dcms`
+- Username: `dcms_app`
+- Password: `dcms_password_change_me`
+
 MongoDB will run on `localhost:27017` with:
 - Username: `admin`
 - Password: `password`
@@ -20,6 +25,8 @@ MongoDB will run on `localhost:27017` with:
 **Option B: Local MongoDB**
 ```bash
 # macOS
+brew install postgresql@16
+brew services start postgresql@16
 brew install mongodb-community
 brew services start mongodb-community
 
@@ -28,6 +35,8 @@ brew services start mongodb-community
 # Install and run MongoDB
 
 # Linux
+sudo apt-get install -y postgresql
+sudo systemctl start postgresql
 sudo apt-get install -y mongodb
 sudo systemctl start mongod
 ```
@@ -38,6 +47,13 @@ sudo systemctl start mongod
 3. Get connection string
 4. Add to `.env`: `MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dcms`
 
+
+Initialize PostgreSQL app credentials:
+```sql
+CREATE USER dcms_app WITH PASSWORD 'dcms_password_change_me';
+CREATE DATABASE dcms OWNER dcms_app;
+GRANT ALL PRIVILEGES ON DATABASE dcms TO dcms_app;
+```
 ---
 
 ### Step 2: Start Backend API
@@ -47,6 +63,8 @@ cd dcms
 npm install                # First time only
 npx nx serve api           # Starts on http://localhost:3000/api
 ```
+
+The API now validates PostgreSQL connectivity and runs migrations automatically during startup.
 
 ### Step 3: Start User Portal
 
@@ -166,6 +184,20 @@ Browse all collections:
 - `payouts`
 - `joinrequests`
 
+### Verify PostgreSQL Connectivity & CRUD
+```bash
+# Health check
+curl http://localhost:3000/api/postgres/health
+
+# Create note
+curl -X POST http://localhost:3000/api/postgres/notes \
+  -H "Content-Type: application/json" \
+  -d '{"title":"first note","content":"postgres is connected"}'
+
+# Read notes
+curl http://localhost:3000/api/postgres/notes
+```
+
 ---
 
 ## 🛠️ API Endpoints Reference
@@ -203,6 +235,14 @@ GET    /api/payouts/scheduled
 POST   /api/payouts/:id/release
 POST   /api/payouts/:id/hold
 POST   /api/payouts/:id/complete
+
+# PostgreSQL checks
+GET    /api/postgres/health
+POST   /api/postgres/notes
+GET    /api/postgres/notes
+GET    /api/postgres/notes/:id
+PATCH  /api/postgres/notes/:id
+DELETE /api/postgres/notes/:id
 ```
 
 ---
@@ -229,6 +269,17 @@ Solution:
 1. Check MongoDB is running: docker ps (for Docker)
 2. Or: brew services list (for local)
 3. Check .env has correct MONGODB_URI
+```
+
+### PostgreSQL Connection Error
+```
+Error: connect ECONNREFUSED 127.0.0.1:5432
+
+Solution:
+1. Check PostgreSQL is running: docker ps
+2. Check .env has correct POSTGRES_* values
+3. Verify database/user privileges are configured
+4. Use POSTGRES_SSL_MODE=require for cloud-hosted PostgreSQL
 ```
 
 ### API Returns 500 Error
@@ -262,6 +313,7 @@ After setup, you should be able to:
 ✅ Release payouts to users  
 ✅ See all data persist after refresh  
 ✅ View data in Mongo Express UI  
+✅ Verify PostgreSQL health and CRUD endpoints  
 
 ---
 
@@ -280,7 +332,7 @@ After setup, you should be able to:
 
 ## 📞 Next Steps
 
-1. ✅ Start MongoDB with docker-compose
+1. ✅ Start MongoDB + PostgreSQL with docker-compose
 2. ✅ Start API, User Portal, Admin Portal
 3. ✅ Test workflows above
 4. ✅ Monitor database with Mongo Express

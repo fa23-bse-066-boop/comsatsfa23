@@ -42,8 +42,6 @@ export function buildPostgresDataSourceOptions(): DataSourceOptions {
     migrations: [CreatePostgresNotesTable1751106000000],
     migrationsRun: true,
     synchronize: false,
-    retryAttempts: 3,
-    retryDelay: 2000,
     logging: (process.env['POSTGRES_LOGGING'] ?? 'false') === 'true',
     ssl: getSslOptions(sslMode),
     extra: {

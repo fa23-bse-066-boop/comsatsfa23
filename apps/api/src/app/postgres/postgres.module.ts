@@ -9,7 +9,11 @@ import { PostgresStartupCheck } from './postgres.startup-check';
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
-      useFactory: () => buildPostgresDataSourceOptions(),
+      useFactory: () => ({
+        ...buildPostgresDataSourceOptions(),
+        retryAttempts: 3,
+        retryDelay: 2000,
+      }),
     }),
     TypeOrmModule.forFeature([PostgresNote]),
   ],

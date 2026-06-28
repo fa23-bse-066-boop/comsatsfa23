@@ -1,6 +1,26 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16
+    container_name: dcms-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: dcms
+      POSTGRES_USER: dcms_app
+      POSTGRES_PASSWORD: dcms_password_change_me
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dcms_app -d dcms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcms-network
+
   mongodb:
     image: mongo:7.0
     container_name: dcms-mongodb
@@ -35,6 +55,7 @@ services:
       - dcms-network
 
 volumes:
+  postgres_data:
   mongodb_data:
   mongodb_config:
 

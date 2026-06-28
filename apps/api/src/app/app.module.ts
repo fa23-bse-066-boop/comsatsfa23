@@ -5,6 +5,7 @@ import { Payment, PaymentSchema } from './schemas/payment.schema';
 import { Payout, PayoutSchema } from './schemas/payout.schema';
 import { JoinRequest, JoinRequestSchema } from './schemas/join-request.schema';
 import { User, UserSchema } from './schemas/user.schema';
+import { PostgresModule } from './postgres/postgres.module';
 
 import { CommitteeService } from './services/committee.service';
 import { PaymentService } from './services/payment.service';
@@ -35,6 +36,7 @@ import { SyncService } from './sync/sync.service';
       { name: Payout.name, schema: PayoutSchema },
       { name: JoinRequest.name, schema: JoinRequestSchema },
     ]),
+    PostgresModule,
   ],
   controllers: [
     AppController,
